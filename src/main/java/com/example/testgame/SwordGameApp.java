@@ -107,19 +107,41 @@ public class SwordGameApp extends GameApplication {
         // Retrieve local IP address for display
         String hostAddress = "Unknown";
         try {
-            hostAddress = java.net.InetAddress.getLocalHost().getHostAddress();
-        } catch (java.net.UnknownHostException e) {
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp()) continue;
+                java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    java.net.InetAddress addr = addresses.nextElement();
+                    if (addr instanceof java.net.Inet4Address && !addr.isLoopbackAddress()) {
+                        hostAddress = addr.getHostAddress();
+                        break;
+                    }
+                }
+                if (!"Unknown".equals(hostAddress)) break;
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
+        final String finalHostAddress = hostAddress;
+
         Text hostText = new Text("Hosting at IP: " + hostAddress);
-        hostText.setFill(Color.WHITE);
-        hostText.setX(10);
-        hostText.setY(590); // Position at the bottom left
+        hostText.setFill(Color.BLUE);
+        hostText.setFont(getUIFactoryService().newFont(16));
+        hostText.setX(50);
+        hostText.setY(80); // Below P1 score which is at Y=50
         addUINode(hostText);
 
         server.setOnConnected(conn -> {
             connection = conn;
+            // Update UI to show someone joined
+            runOnce(() -> {
+                hostText.setText("Client joined! Hosting at IP: " + finalHostAddress);
+                getNotificationService().pushNotification("Client joined!");
+            }, javafx.util.Duration.seconds(0.1));
+
             conn.addMessageHandler((c, bundle) -> {
                 // Server receives input from Client (Player 2)
                 String action = bundle.get("action");
@@ -150,6 +172,9 @@ public class SwordGameApp extends GameApplication {
         var client = getNetService().newTCPClient(ip, 55555);
         client.setOnConnected(conn -> {
             connection = conn;
+            runOnce(() -> {
+                getNotificationService().pushNotification("Connected to Host at " + ip);
+            }, javafx.util.Duration.seconds(0.1));
             conn.addMessageHandler((c, bundle) -> {
                 // Client receives state from Server
                 double p1X = bundle.get("p1X");
