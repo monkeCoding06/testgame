@@ -103,6 +103,21 @@ public class SwordGameApp extends GameApplication {
     private void initServer() {
         netMode = NetMode.SERVER;
         var server = getNetService().newTCPServer(55555);
+
+        // Retrieve local IP address for display
+        String hostAddress = "Unknown";
+        try {
+            hostAddress = java.net.InetAddress.getLocalHost().getHostAddress();
+        } catch (java.net.UnknownHostException e) {
+            e.printStackTrace();
+        }
+
+        Text hostText = new Text("Hosting at IP: " + hostAddress);
+        hostText.setFill(Color.WHITE);
+        hostText.setX(10);
+        hostText.setY(590); // Position at the bottom left
+        addUINode(hostText);
+
         server.setOnConnected(conn -> {
             connection = conn;
             conn.addMessageHandler((c, bundle) -> {
@@ -154,11 +169,25 @@ public class SwordGameApp extends GameApplication {
                 int score1 = bundle.get("score1");
                 int score2 = bundle.get("score2");
                 boolean slowmo = bundle.get("slowmo");
+                double p1Opac = bundle.get("p1Opac");
+                double p2Opac = bundle.get("p2Opac");
+                boolean p1Attack = bundle.get("p1Attack");
+                boolean p1Parry = bundle.get("p1Parry");
+                boolean p2Attack = bundle.get("p2Attack");
+                boolean p2Parry = bundle.get("p2Parry");
 
                 player1.setPosition(p1X, p1Y);
                 player1.setScaleX(p1Scale);
+                player1.getViewComponent().setOpacity(p1Opac);
+                player1.getComponent(PlayerComponent.class).setAttacking(p1Attack);
+                player1.getComponent(PlayerComponent.class).setParrying(p1Parry);
+
                 player2.setPosition(p2X, p2Y);
                 player2.setScaleX(p2Scale);
+                player2.getViewComponent().setOpacity(p2Opac);
+                player2.getComponent(PlayerComponent.class).setAttacking(p2Attack);
+                player2.getComponent(PlayerComponent.class).setParrying(p2Parry);
+
                 sword1.setVisible(s1Vis);
                 sword1.setPosition(s1X, s1Y);
                 sword1.setRotation(s1Rot);
@@ -314,6 +343,12 @@ public class SwordGameApp extends GameApplication {
             bundle.put("score1", geti("score1"));
             bundle.put("score2", geti("score2"));
             bundle.put("slowmo", getb("slowmo"));
+            bundle.put("p1Opac", player1.getViewComponent().getOpacity());
+            bundle.put("p2Opac", player2.getViewComponent().getOpacity());
+            bundle.put("p1Attack", player1.getComponent(PlayerComponent.class).isAttacking());
+            bundle.put("p1Parry", player1.getComponent(PlayerComponent.class).isParrying());
+            bundle.put("p2Attack", player2.getComponent(PlayerComponent.class).isAttacking());
+            bundle.put("p2Parry", player2.getComponent(PlayerComponent.class).isParrying());
             connection.send(bundle);
         }
 
