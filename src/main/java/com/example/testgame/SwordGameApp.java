@@ -163,8 +163,18 @@ public class SwordGameApp extends GameApplication {
                     }
                 }
             });
+
+            // No explicit setOnDisconnected in FXGL Connection
+            // We can check connection.isConnected() in onUpdate if needed,
+            // or just let it fail silently and handle it when sending.
         });
-        server.startAsync();
+
+        try {
+            server.startAsync();
+        } catch (Exception e) {
+            hostText.setText("Failed to start server: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void initClient(String ip) {
@@ -226,8 +236,16 @@ public class SwordGameApp extends GameApplication {
                 // Additional visual feedback for states could be added here
                 // but for now, position and visibility are the key.
             });
+
+            // No explicit setOnDisconnected in FXGL Connection
         });
-        client.connectAsync();
+
+        try {
+            client.connectAsync();
+        } catch (Exception e) {
+            getDialogService().showMessageBox("Failed to connect: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -268,9 +286,11 @@ public class SwordGameApp extends GameApplication {
             @Override
             protected void onAction() {
                 if (netMode == NetMode.CLIENT) {
-                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
-                    bundle.put("action", "MOVE_LEFT");
-                    if (connection != null) connection.send(bundle);
+                    if (connection != null && connection.isConnected()) {
+                        var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                        bundle.put("action", "MOVE_LEFT");
+                        connection.send(bundle);
+                    }
                 }
             }
         }, KeyCode.LEFT);
@@ -278,9 +298,11 @@ public class SwordGameApp extends GameApplication {
             @Override
             protected void onAction() {
                 if (netMode == NetMode.CLIENT) {
-                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
-                    bundle.put("action", "MOVE_RIGHT");
-                    if (connection != null) connection.send(bundle);
+                    if (connection != null && connection.isConnected()) {
+                        var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                        bundle.put("action", "MOVE_RIGHT");
+                        connection.send(bundle);
+                    }
                 }
             }
         }, KeyCode.RIGHT);
@@ -288,9 +310,11 @@ public class SwordGameApp extends GameApplication {
             @Override
             protected void onActionBegin() {
                 if (netMode == NetMode.CLIENT) {
-                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
-                    bundle.put("action", "ATTACK");
-                    if (connection != null) connection.send(bundle);
+                    if (connection != null && connection.isConnected()) {
+                        var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                        bundle.put("action", "ATTACK");
+                        connection.send(bundle);
+                    }
                 }
             }
         }, KeyCode.ENTER);
@@ -298,9 +322,11 @@ public class SwordGameApp extends GameApplication {
             @Override
             protected void onActionBegin() {
                 if (netMode == NetMode.CLIENT) {
-                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
-                    bundle.put("action", "PARRY");
-                    if (connection != null) connection.send(bundle);
+                    if (connection != null && connection.isConnected()) {
+                        var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                        bundle.put("action", "PARRY");
+                        connection.send(bundle);
+                    }
                 }
             }
         }, KeyCode.NUMPAD0);
@@ -350,6 +376,10 @@ public class SwordGameApp extends GameApplication {
         if (getb("slowmo")) return;
 
         if (netMode == NetMode.SERVER && connection != null) {
+            if (!connection.isConnected()) {
+                connection = null;
+                return;
+            }
             var bundle = new com.almasb.fxgl.core.serialization.Bundle("State");
             bundle.put("p1X", player1.getX());
             bundle.put("p1Y", player1.getY());
