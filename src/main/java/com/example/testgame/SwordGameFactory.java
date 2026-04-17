@@ -23,9 +23,8 @@ public class SwordGameFactory implements EntityFactory {
 
     @Spawns("sword")
     public Entity newSword(SpawnData data) {
-        Rectangle rect = new Rectangle(30, 5, Color.GOLD);
         return entityBuilder(data)
-                .viewWithBBox(rect)
+                .bbox(new com.almasb.fxgl.physics.HitBox(new javafx.geometry.Point2D(0, 0), com.almasb.fxgl.physics.BoundingShape.box(30, 5)))
                 .with(new CollidableComponent(true))
                 .build();
     }
@@ -33,9 +32,8 @@ public class SwordGameFactory implements EntityFactory {
     @Spawns("parry_shield")
     public Entity newParryShield(SpawnData data) {
         // Larger box: 80x60 (compared to player's 40x40)
-        Rectangle rect = new Rectangle(80, 60, Color.CYAN);
         return entityBuilder(data)
-                .viewWithBBox(rect)
+                .bbox(new com.almasb.fxgl.physics.HitBox(new javafx.geometry.Point2D(0, 0), com.almasb.fxgl.physics.BoundingShape.box(80, 60)))
                 .with(new CollidableComponent(true))
                 .build();
     }

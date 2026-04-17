@@ -37,12 +37,6 @@ public class PlayerComponent extends Component {
         texture.setTranslateY(-60); 
         entity.getViewComponent().addChild(texture);
 
-        // Draw the hitbox (40x40 box)
-        Rectangle hitboxView = new Rectangle(40, 40, Color.color(0, 1, 0, 0.3));
-        hitboxView.setStroke(Color.GREEN);
-        hitboxView.setStrokeWidth(2);
-        entity.getViewComponent().addChild(hitboxView);
-
         parryBar = new Rectangle(40, 5, Color.CYAN);
         parryBar.setTranslateY(-10);
         parryBar.setVisible(false);

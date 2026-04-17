@@ -346,7 +346,6 @@ public class SwordGameApp extends GameApplication {
         // Spawn larger parry shield entity
         Entity parryShield = spawn("parry_shield", player.getX() - 20, player.getY() - 10);
         parryShield.setType(playerNum == 1 ? EntityType.PARRY_P1 : EntityType.PARRY_P2);
-        parryShield.getViewComponent().setOpacity(0.3); // Semi-transparent blue
         
         // Make shield follow player
         parryShield.xProperty().bind(player.xProperty().subtract(20));
