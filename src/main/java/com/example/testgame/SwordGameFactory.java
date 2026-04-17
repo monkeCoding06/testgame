@@ -29,4 +29,14 @@ public class SwordGameFactory implements EntityFactory {
                 .with(new CollidableComponent(true))
                 .build();
     }
+
+    @Spawns("parry_shield")
+    public Entity newParryShield(SpawnData data) {
+        // Larger box: 80x60 (compared to player's 40x40)
+        Rectangle rect = new Rectangle(80, 60, Color.CYAN);
+        return entityBuilder(data)
+                .viewWithBBox(rect)
+                .with(new CollidableComponent(true))
+                .build();
+    }
 }

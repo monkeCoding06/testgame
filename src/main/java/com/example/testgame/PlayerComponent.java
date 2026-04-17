@@ -14,6 +14,9 @@ public class PlayerComponent extends Component {
     private Texture idleTexture, attackTexture, parryTexture;
     private boolean isAttacking = false;
     private boolean isParrying = false;
+    private Rectangle parryBar;
+    private double parryTimer = 0;
+    private final double PARRY_DURATION = 0.6;
 
     public PlayerComponent() {
         idleTexture = texture("Idle.png", 100, 100);
@@ -39,6 +42,11 @@ public class PlayerComponent extends Component {
         hitboxView.setStroke(Color.GREEN);
         hitboxView.setStrokeWidth(2);
         entity.getViewComponent().addChild(hitboxView);
+
+        parryBar = new Rectangle(40, 5, Color.CYAN);
+        parryBar.setTranslateY(-10);
+        parryBar.setVisible(false);
+        entity.getViewComponent().addChild(parryBar);
     }
 
     @Override
@@ -47,6 +55,9 @@ public class PlayerComponent extends Component {
             updateTexture(attackTexture);
         } else if (isParrying) {
             updateTexture(parryTexture);
+            parryTimer -= tpf;
+            if (parryTimer < 0) parryTimer = 0;
+            parryBar.setWidth(40 * (parryTimer / PARRY_DURATION));
         } else {
             updateTexture(idleTexture);
         }
@@ -92,7 +103,7 @@ public class PlayerComponent extends Component {
         isParrying = true;
         getGameTimer().runOnceAfter(() -> {
             isParrying = false;
-        }, Duration.seconds(0.5));
+        }, Duration.seconds(0.6));
     }
 
     public void setAttacking(boolean attacking) {
@@ -101,6 +112,13 @@ public class PlayerComponent extends Component {
 
     public void setParrying(boolean parrying) {
         isParrying = parrying;
+        if (parrying) {
+            parryTimer = PARRY_DURATION;
+            parryBar.setVisible(true);
+            parryBar.setWidth(40);
+        } else {
+            parryBar.setVisible(false);
+        }
     }
 
     public boolean isAttacking() {
