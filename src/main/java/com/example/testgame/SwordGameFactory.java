@@ -17,6 +17,7 @@ public class SwordGameFactory implements EntityFactory {
         return entityBuilder(data)
                 .bbox(new com.almasb.fxgl.physics.HitBox(new javafx.geometry.Point2D(0, 0), com.almasb.fxgl.physics.BoundingShape.box(40, 40)))
                 .with(new CollidableComponent(true))
+                .with(new PlayerComponent())
                 .build();
     }
 

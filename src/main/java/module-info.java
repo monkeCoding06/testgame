@@ -6,6 +6,7 @@ module com.example.testgame {
     requires org.kordamp.bootstrapfx.core;
     requires com.almasb.fxgl.all;
 
-    opens com.example.testgame to javafx.fxml;
+    opens com.example.testgame to javafx.fxml, com.almasb.fxgl.all;
+    opens assets.textures to com.almasb.fxgl.all;
     exports com.example.testgame;
 }

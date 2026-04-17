@@ -52,11 +52,10 @@ public class SwordGameApp extends GameApplication {
 
         player1 = spawn("player", 100, 300);
         player1.setType(EntityType.PLAYER1);
-        player1.getViewComponent().addChild(texture("spritesheet.png"));
 
         player2 = spawn("player", 660, 300);
         player2.setType(EntityType.PLAYER2);
-        player2.getViewComponent().addChild(texture("spritesheet.png"));
+        player2.setScaleX(-1);
         
         // Initial swords (hidden/inactive)
         sword1 = spawn("sword", -100, -100);
@@ -73,16 +72,16 @@ public class SwordGameApp extends GameApplication {
         // Player 1
         getInput().addAction(new UserAction("P1 Move Left") {
             @Override
-            protected void onAction() { player1.translateX(-5); }
+            protected void onAction() { player1.getComponent(PlayerComponent.class).moveLeft(); }
         }, KeyCode.A);
         getInput().addAction(new UserAction("P1 Move Right") {
             @Override
-            protected void onAction() { player1.translateX(5); }
+            protected void onAction() { player1.getComponent(PlayerComponent.class).moveRight(); }
         }, KeyCode.D);
         getInput().addAction(new UserAction("P1 Attack") {
             @Override
             protected void onActionBegin() { 
-                if (p1State == PlayerState.IDLE) attack(player1, sword1, 1); 
+                if (p1State == PlayerState.IDLE) attack(player1, sword1, (int) player1.getScaleX()); 
             }
         }, MouseButton.PRIMARY);
 
@@ -95,14 +94,24 @@ public class SwordGameApp extends GameApplication {
     }
 
     private void parry(Entity player, int playerNum) {
-        if (playerNum == 1) p1State = PlayerState.PARRYING;
-        else p2State = PlayerState.PARRYING;
+        if (playerNum == 1) {
+            p1State = PlayerState.PARRYING;
+            player.getComponent(PlayerComponent.class).setParrying(true);
+        } else {
+            p2State = PlayerState.PARRYING;
+            player.getComponent(PlayerComponent.class).setParrying(true);
+        }
 
         player.getViewComponent().setOpacity(0.5);
 
         runOnce(() -> {
-            if (playerNum == 1) p1State = PlayerState.IDLE;
-            else p2State = PlayerState.IDLE;
+            if (playerNum == 1) {
+                p1State = PlayerState.IDLE;
+                player.getComponent(PlayerComponent.class).setParrying(false);
+            } else {
+                p2State = PlayerState.IDLE;
+                player.getComponent(PlayerComponent.class).setParrying(false);
+            }
             player.getViewComponent().setOpacity(1.0);
         }, javafx.util.Duration.seconds(0.3));
     }
@@ -125,20 +134,32 @@ public class SwordGameApp extends GameApplication {
 
             if (absDist > 120) {
                 // Too far, move closer
-                player2.translateX(distance > 0 ? 3 : -3);
+                if (distance > 0) {
+                    player2.getComponent(PlayerComponent.class).moveRight();
+                } else {
+                    player2.getComponent(PlayerComponent.class).moveLeft();
+                }
             } else if (absDist < 80) {
                 // Too close, move away or attack
                 if (Math.random() < 0.02) {
                     attack(player2, sword2, (int) Math.signum(distance));
                 } else {
-                    player2.translateX(distance > 0 ? -2 : 2);
+                    if (distance > 0) {
+                        player2.getComponent(PlayerComponent.class).moveLeft();
+                    } else {
+                        player2.getComponent(PlayerComponent.class).moveRight();
+                    }
                 }
             } else {
                 // Optimal range, wait or attack
                 if (Math.random() < 0.03) {
                     attack(player2, sword2, (int) Math.signum(distance));
                 } else if (Math.random() < 0.01) {
-                    player2.translateX(distance > 0 ? 2 : -2); // Shuffle
+                    if (distance > 0) {
+                        player2.getComponent(PlayerComponent.class).moveRight();
+                    } else {
+                        player2.getComponent(PlayerComponent.class).moveLeft();
+                    }
                 }
             }
         }
@@ -148,10 +169,15 @@ public class SwordGameApp extends GameApplication {
         if (sword.isVisible()) return;
 
         int playerNum = player.getType() == EntityType.PLAYER1 ? 1 : 2;
-        if (playerNum == 1) p1State = PlayerState.ATTACKING;
-        else p2State = PlayerState.ATTACKING;
+        if (playerNum == 1) {
+            p1State = PlayerState.ATTACKING;
+            player.getComponent(PlayerComponent.class).setAttacking(true);
+        } else {
+            p2State = PlayerState.ATTACKING;
+            player.getComponent(PlayerComponent.class).setAttacking(true);
+        }
 
-        sword.setPosition(player.getX() + (direction > 0 ? 40 : -30), player.getY() + 10);
+        sword.setPosition(player.getX() + (direction > 0 ? 55 : -45), player.getY() + 25);
         sword.setVisible(true);
         sword.setRotation(direction > 0 ? -45 : 45);
 
@@ -167,9 +193,15 @@ public class SwordGameApp extends GameApplication {
             sword.setVisible(false);
             sword.setPosition(-100, -100);
             if (playerNum == 1) {
-                if (p1State == PlayerState.ATTACKING) p1State = PlayerState.IDLE;
+                if (p1State == PlayerState.ATTACKING) {
+                    p1State = PlayerState.IDLE;
+                    player.getComponent(PlayerComponent.class).setAttacking(false);
+                }
             } else {
-                if (p2State == PlayerState.ATTACKING) p2State = PlayerState.IDLE;
+                if (p2State == PlayerState.ATTACKING) {
+                    p2State = PlayerState.IDLE;
+                    player.getComponent(PlayerComponent.class).setAttacking(false);
+                }
             }
         }, javafx.util.Duration.seconds(0.2));
     }
@@ -203,8 +235,15 @@ public class SwordGameApp extends GameApplication {
     }
 
     private void stun(Entity player, int playerNum) {
-        if (playerNum == 1) p1State = PlayerState.STUNNED;
-        else p2State = PlayerState.STUNNED;
+        if (playerNum == 1) {
+            p1State = PlayerState.STUNNED;
+            player.getComponent(PlayerComponent.class).setAttacking(false);
+            player.getComponent(PlayerComponent.class).setParrying(false);
+        } else {
+            p2State = PlayerState.STUNNED;
+            player.getComponent(PlayerComponent.class).setAttacking(false);
+            player.getComponent(PlayerComponent.class).setParrying(false);
+        }
 
         player.getViewComponent().setOpacity(0.2);
 
@@ -218,10 +257,16 @@ public class SwordGameApp extends GameApplication {
     private void resetPlayers() {
         p1State = PlayerState.IDLE;
         p2State = PlayerState.IDLE;
+        player1.getComponent(PlayerComponent.class).setAttacking(false);
+        player1.getComponent(PlayerComponent.class).setParrying(false);
+        player2.getComponent(PlayerComponent.class).setAttacking(false);
+        player2.getComponent(PlayerComponent.class).setParrying(false);
         player1.getViewComponent().setOpacity(1.0);
         player2.getViewComponent().setOpacity(1.0);
         player1.setPosition(100, 300);
+        player1.setScaleX(1);
         player2.setPosition(660, 300);
+        player2.setScaleX(-1);
         sword1.setVisible(false);
         sword1.setPosition(-100, -100);
         sword2.setVisible(false);
