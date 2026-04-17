@@ -26,6 +26,13 @@ public class SwordGameApp extends GameApplication {
         IDLE, ATTACKING, PARRYING, STUNNED
     }
 
+    public enum NetMode {
+        SINGLE_PLAYER, SERVER, CLIENT
+    }
+
+    private NetMode netMode = NetMode.SINGLE_PLAYER;
+    private com.almasb.fxgl.net.Connection<com.almasb.fxgl.core.serialization.Bundle> connection;
+
     private Entity player1;
     private Entity player2;
     private Entity sword1;
@@ -68,6 +75,105 @@ public class SwordGameApp extends GameApplication {
         sword2 = spawn("sword", -100, -100);
         sword2.setType(EntityType.SWORD2);
         sword2.setVisible(false);
+
+        // Network selection
+        runOnce(() -> {
+            getDialogService().showConfirmationBox("Start as Multiplayer?", result -> {
+                if (result) {
+                    getDialogService().showConfirmationBox("Host a game? (No to Join)", isHost -> {
+                        if (isHost) {
+                            initServer();
+                        } else {
+                            getDialogService().showInputBox("Enter Host IP", ip -> {
+                                if (ip != null && !ip.isEmpty()) {
+                                    initClient(ip);
+                                } else {
+                                    netMode = NetMode.SINGLE_PLAYER;
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    netMode = NetMode.SINGLE_PLAYER;
+                }
+            });
+        }, javafx.util.Duration.seconds(0.1));
+    }
+
+    private void initServer() {
+        netMode = NetMode.SERVER;
+        var server = getNetService().newTCPServer(55555);
+        server.setOnConnected(conn -> {
+            connection = conn;
+            conn.addMessageHandler((c, bundle) -> {
+                // Server receives input from Client (Player 2)
+                String action = bundle.get("action");
+                if ("MOVE_LEFT".equals(action)) {
+                    if (!getb("slowmo") && p2State != PlayerState.STUNNED) {
+                        player2.getComponent(PlayerComponent.class).moveLeft();
+                    }
+                } else if ("MOVE_RIGHT".equals(action)) {
+                    if (!getb("slowmo") && p2State != PlayerState.STUNNED) {
+                        player2.getComponent(PlayerComponent.class).moveRight();
+                    }
+                } else if ("ATTACK".equals(action)) {
+                    if (p2State == PlayerState.IDLE && !getb("slowmo")) {
+                        attack(player2, sword2, (int) Math.signum(player1.getX() - player2.getX()));
+                    }
+                } else if ("PARRY".equals(action)) {
+                    if (p2State == PlayerState.IDLE && !getb("slowmo")) {
+                        parry(player2, 2);
+                    }
+                }
+            });
+        });
+        server.startAsync();
+    }
+
+    private void initClient(String ip) {
+        netMode = NetMode.CLIENT;
+        var client = getNetService().newTCPClient(ip, 55555);
+        client.setOnConnected(conn -> {
+            connection = conn;
+            conn.addMessageHandler((c, bundle) -> {
+                // Client receives state from Server
+                double p1X = bundle.get("p1X");
+                double p1Y = bundle.get("p1Y");
+                double p1Scale = bundle.get("p1Scale");
+                double p2X = bundle.get("p2X");
+                double p2Y = bundle.get("p2Y");
+                double p2Scale = bundle.get("p2Scale");
+                boolean s1Vis = bundle.get("s1Vis");
+                double s1X = bundle.get("s1X");
+                double s1Y = bundle.get("s1Y");
+                double s1Rot = bundle.get("s1Rot");
+                boolean s2Vis = bundle.get("s2Vis");
+                double s2X = bundle.get("s2X");
+                double s2Y = bundle.get("s2Y");
+                double s2Rot = bundle.get("s2Rot");
+                int score1 = bundle.get("score1");
+                int score2 = bundle.get("score2");
+                boolean slowmo = bundle.get("slowmo");
+
+                player1.setPosition(p1X, p1Y);
+                player1.setScaleX(p1Scale);
+                player2.setPosition(p2X, p2Y);
+                player2.setScaleX(p2Scale);
+                sword1.setVisible(s1Vis);
+                sword1.setPosition(s1X, s1Y);
+                sword1.setRotation(s1Rot);
+                sword2.setVisible(s2Vis);
+                sword2.setPosition(s2X, s2Y);
+                sword2.setRotation(s2Rot);
+                set("score1", score1);
+                set("score2", score2);
+                set("slowmo", slowmo);
+
+                // Additional visual feedback for states could be added here
+                // but for now, position and visibility are the key.
+            });
+        });
+        client.connectAsync();
     }
 
     @Override
@@ -75,15 +181,22 @@ public class SwordGameApp extends GameApplication {
         // Player 1
         getInput().addAction(new UserAction("P1 Move Left") {
             @Override
-            protected void onAction() { if (!getb("slowmo")) player1.getComponent(PlayerComponent.class).moveLeft(); }
+            protected void onAction() {
+                if (netMode == NetMode.CLIENT) return;
+                if (!getb("slowmo")) player1.getComponent(PlayerComponent.class).moveLeft();
+            }
         }, KeyCode.A);
         getInput().addAction(new UserAction("P1 Move Right") {
             @Override
-            protected void onAction() { if (!getb("slowmo")) player1.getComponent(PlayerComponent.class).moveRight(); }
+            protected void onAction() {
+                if (netMode == NetMode.CLIENT) return;
+                if (!getb("slowmo")) player1.getComponent(PlayerComponent.class).moveRight();
+            }
         }, KeyCode.D);
         getInput().addAction(new UserAction("P1 Attack") {
             @Override
             protected void onActionBegin() {
+                if (netMode == NetMode.CLIENT) return;
                 if (p1State == PlayerState.IDLE && !getb("slowmo")) attack(player1, sword1, (int) player1.getScaleX());
             }
         }, MouseButton.PRIMARY);
@@ -91,9 +204,52 @@ public class SwordGameApp extends GameApplication {
         getInput().addAction(new UserAction("P1 Parry") {
             @Override
             protected void onActionBegin() {
+                if (netMode == NetMode.CLIENT) return;
                 if (p1State == PlayerState.IDLE && !getb("slowmo")) parry(player1, 1);
             }
         }, MouseButton.SECONDARY);
+
+        // Player 2 / Client Controls
+        getInput().addAction(new UserAction("P2 Move Left") {
+            @Override
+            protected void onAction() {
+                if (netMode == NetMode.CLIENT) {
+                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                    bundle.put("action", "MOVE_LEFT");
+                    if (connection != null) connection.send(bundle);
+                }
+            }
+        }, KeyCode.LEFT);
+        getInput().addAction(new UserAction("P2 Move Right") {
+            @Override
+            protected void onAction() {
+                if (netMode == NetMode.CLIENT) {
+                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                    bundle.put("action", "MOVE_RIGHT");
+                    if (connection != null) connection.send(bundle);
+                }
+            }
+        }, KeyCode.RIGHT);
+        getInput().addAction(new UserAction("P2 Attack") {
+            @Override
+            protected void onActionBegin() {
+                if (netMode == NetMode.CLIENT) {
+                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                    bundle.put("action", "ATTACK");
+                    if (connection != null) connection.send(bundle);
+                }
+            }
+        }, KeyCode.ENTER);
+        getInput().addAction(new UserAction("P2 Parry") {
+            @Override
+            protected void onActionBegin() {
+                if (netMode == NetMode.CLIENT) {
+                    var bundle = new com.almasb.fxgl.core.serialization.Bundle("Input");
+                    bundle.put("action", "PARRY");
+                    if (connection != null) connection.send(bundle);
+                }
+            }
+        }, KeyCode.NUMPAD0);
     }
 
     private void parry(Entity player, int playerNum) {
@@ -138,7 +294,31 @@ public class SwordGameApp extends GameApplication {
     @Override
     protected void onUpdate(double tpf) {
         if (getb("slowmo")) return;
-        
+
+        if (netMode == NetMode.SERVER && connection != null) {
+            var bundle = new com.almasb.fxgl.core.serialization.Bundle("State");
+            bundle.put("p1X", player1.getX());
+            bundle.put("p1Y", player1.getY());
+            bundle.put("p1Scale", player1.getScaleX());
+            bundle.put("p2X", player2.getX());
+            bundle.put("p2Y", player2.getY());
+            bundle.put("p2Scale", player2.getScaleX());
+            bundle.put("s1Vis", sword1.isVisible());
+            bundle.put("s1X", sword1.getX());
+            bundle.put("s1Y", sword1.getY());
+            bundle.put("s1Rot", sword1.getRotation());
+            bundle.put("s2Vis", sword2.isVisible());
+            bundle.put("s2X", sword2.getX());
+            bundle.put("s2Y", sword2.getY());
+            bundle.put("s2Rot", sword2.getRotation());
+            bundle.put("score1", geti("score1"));
+            bundle.put("score2", geti("score2"));
+            bundle.put("slowmo", getb("slowmo"));
+            connection.send(bundle);
+        }
+
+        if (netMode != NetMode.SINGLE_PLAYER) return;
+
         // AI for Player 2
         if (p2State == PlayerState.STUNNED) return;
 
@@ -234,6 +414,7 @@ public class SwordGameApp extends GameApplication {
     @Override
     protected void initPhysics() {
         onCollisionBegin(EntityType.SWORD1, EntityType.PARRY_P2, (sword, shield) -> {
+            if (netMode == NetMode.CLIENT) return;
             spawnSparks(sword.getCenter());
             getGameScene().getViewport().shake(0.2, 0.2);
             
@@ -254,6 +435,7 @@ public class SwordGameApp extends GameApplication {
         });
 
         onCollisionBegin(EntityType.SWORD2, EntityType.PARRY_P1, (sword, shield) -> {
+            if (netMode == NetMode.CLIENT) return;
             spawnSparks(sword.getCenter());
             getGameScene().getViewport().shake(0.2, 5);
 
@@ -274,6 +456,7 @@ public class SwordGameApp extends GameApplication {
         });
 
         onCollisionBegin(EntityType.SWORD1, EntityType.PLAYER2, (sword, p2) -> {
+            if (netMode == NetMode.CLIENT) return;
             if (p2State != PlayerState.STUNNED && p2State != PlayerState.PARRYING) {
                 spawnHitEffect(p2.getCenter());
                 getGameScene().getViewport().shake(0.5, 5);
@@ -288,6 +471,7 @@ public class SwordGameApp extends GameApplication {
             }
         });
         onCollisionBegin(EntityType.SWORD2, EntityType.PLAYER1, (sword, p1) -> {
+            if (netMode == NetMode.CLIENT) return;
             if (p1State != PlayerState.STUNNED && p1State != PlayerState.PARRYING) {
                 spawnHitEffect(p1.getCenter());
                 getGameScene().getViewport().shake(0.5, 5);
