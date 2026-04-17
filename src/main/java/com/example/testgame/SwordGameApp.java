@@ -59,7 +59,7 @@ public class SwordGameApp extends GameApplication {
         player2 = spawn("player", 660, 300);
         player2.setType(EntityType.PLAYER2);
         player2.setScaleX(-1);
-        
+
         // Initial swords (hidden/inactive)
         sword1 = spawn("sword", -100, -100);
         sword1.setType(EntityType.SWORD1);
@@ -83,8 +83,8 @@ public class SwordGameApp extends GameApplication {
         }, KeyCode.D);
         getInput().addAction(new UserAction("P1 Attack") {
             @Override
-            protected void onActionBegin() { 
-                if (p1State == PlayerState.IDLE && !getb("slowmo")) attack(player1, sword1, (int) player1.getScaleX()); 
+            protected void onActionBegin() {
+                if (p1State == PlayerState.IDLE && !getb("slowmo")) attack(player1, sword1, (int) player1.getScaleX());
             }
         }, MouseButton.PRIMARY);
 
@@ -147,36 +147,39 @@ public class SwordGameApp extends GameApplication {
         
         // Advanced AI logic
         if (p2State == PlayerState.IDLE) {
-            // Reaction to player attack - slightly faster reaction
-            if (sword1.isVisible() && absDist < 120 && Math.random() < 0.1) {
+            // Reaction to player attack - more aggressive parry/reaction
+            if (sword1.isVisible() && absDist < 120 && Math.random() < 0.25) {
                 parry(player2, 2);
                 return;
             }
 
-            if (absDist > 120) {
-                // Too far, move closer
+            if (absDist > 80) {
+                // Too far, move closer (more aggressively)
                 if (distance > 0) {
                     player2.getComponent(PlayerComponent.class).moveRight();
                 } else {
                     player2.getComponent(PlayerComponent.class).moveLeft();
                 }
-            } else if (absDist < 60) {
-                // Too close, move away or attack
-                if (Math.random() < 0.05) {
+            } else if (absDist < 40) {
+                // Too close, move away or attack (higher attack probability)
+                if (Math.random() < 0.15) {
                     attack(player2, sword2, (int) Math.signum(distance));
                 } else {
-                    if (distance > 0) {
-                        player2.getComponent(PlayerComponent.class).moveLeft();
-                    } else {
-                        player2.getComponent(PlayerComponent.class).moveRight();
+                    // Less likely to just move away, might still stay close
+                    if (Math.random() < 0.5) {
+                        if (distance > 0) {
+                            player2.getComponent(PlayerComponent.class).moveLeft();
+                        } else {
+                            player2.getComponent(PlayerComponent.class).moveRight();
+                        }
                     }
                 }
             } else {
-                // Optimal range, wait, feint or attack
-                if (Math.random() < 0.04) {
+                // Optimal range, wait, feint or attack (higher attack/feint probabilities)
+                if (Math.random() < 0.1) {
                     attack(player2, sword2, (int) Math.signum(distance));
-                } else if (Math.random() < 0.02) {
-                    // Feint/Movement
+                } else if (Math.random() < 0.05) {
+                    // Aggressive feinting
                     if (distance > 0) {
                         player2.getComponent(PlayerComponent.class).moveRight();
                     } else {
@@ -232,7 +235,7 @@ public class SwordGameApp extends GameApplication {
     protected void initPhysics() {
         onCollisionBegin(EntityType.SWORD1, EntityType.PARRY_P2, (sword, shield) -> {
             spawnSparks(sword.getCenter());
-            getGameScene().getViewport().shake(0.2, 5);
+            getGameScene().getViewport().shake(0.2, 0.2);
             
             // Knockback
             player1.translateX(-20);
