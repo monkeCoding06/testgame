@@ -143,25 +143,27 @@ public class SwordGameApp extends GameApplication {
             }, javafx.util.Duration.seconds(0.1));
 
             conn.addMessageHandler((c, bundle) -> {
-                // Server receives input from Client (Player 2)
-                String action = bundle.get("action");
-                if ("MOVE_LEFT".equals(action)) {
-                    if (!getb("slowmo") && p2State != PlayerState.STUNNED) {
-                        player2.getComponent(PlayerComponent.class).moveLeft();
+                runOnce(() -> {
+                    // Server receives input from Client (Player 2)
+                    String action = bundle.get("action");
+                    if ("MOVE_LEFT".equals(action)) {
+                        if (!getb("slowmo") && p2State != PlayerState.STUNNED) {
+                            player2.getComponent(PlayerComponent.class).moveLeft();
+                        }
+                    } else if ("MOVE_RIGHT".equals(action)) {
+                        if (!getb("slowmo") && p2State != PlayerState.STUNNED) {
+                            player2.getComponent(PlayerComponent.class).moveRight();
+                        }
+                    } else if ("ATTACK".equals(action)) {
+                        if (p2State == PlayerState.IDLE && !getb("slowmo")) {
+                            attack(player2, sword2, (int) player2.getScaleX());
+                        }
+                    } else if ("PARRY".equals(action)) {
+                        if (p2State == PlayerState.IDLE && !getb("slowmo")) {
+                            parry(player2, 2);
+                        }
                     }
-                } else if ("MOVE_RIGHT".equals(action)) {
-                    if (!getb("slowmo") && p2State != PlayerState.STUNNED) {
-                        player2.getComponent(PlayerComponent.class).moveRight();
-                    }
-                } else if ("ATTACK".equals(action)) {
-                    if (p2State == PlayerState.IDLE && !getb("slowmo")) {
-                        attack(player2, sword2, (int) Math.signum(player1.getX() - player2.getX()));
-                    }
-                } else if ("PARRY".equals(action)) {
-                    if (p2State == PlayerState.IDLE && !getb("slowmo")) {
-                        parry(player2, 2);
-                    }
-                }
+                }, javafx.util.Duration.ZERO);
             });
 
             // No explicit setOnDisconnected in FXGL Connection
@@ -186,55 +188,57 @@ public class SwordGameApp extends GameApplication {
                 getNotificationService().pushNotification("Connected to Host at " + ip);
             }, javafx.util.Duration.seconds(0.1));
             conn.addMessageHandler((c, bundle) -> {
-                // Client receives state from Server
-                double p1X = bundle.get("p1X");
-                double p1Y = bundle.get("p1Y");
-                double p1Scale = bundle.get("p1Scale");
-                double p2X = bundle.get("p2X");
-                double p2Y = bundle.get("p2Y");
-                double p2Scale = bundle.get("p2Scale");
-                boolean s1Vis = bundle.get("s1Vis");
-                double s1X = bundle.get("s1X");
-                double s1Y = bundle.get("s1Y");
-                double s1Rot = bundle.get("s1Rot");
-                boolean s2Vis = bundle.get("s2Vis");
-                double s2X = bundle.get("s2X");
-                double s2Y = bundle.get("s2Y");
-                double s2Rot = bundle.get("s2Rot");
-                int score1 = bundle.get("score1");
-                int score2 = bundle.get("score2");
-                boolean slowmo = bundle.get("slowmo");
-                double p1Opac = bundle.get("p1Opac");
-                double p2Opac = bundle.get("p2Opac");
-                boolean p1Attack = bundle.get("p1Attack");
-                boolean p1Parry = bundle.get("p1Parry");
-                boolean p2Attack = bundle.get("p2Attack");
-                boolean p2Parry = bundle.get("p2Parry");
+                runOnce(() -> {
+                    // Client receives state from Server
+                    double p1X = bundle.get("p1X");
+                    double p1Y = bundle.get("p1Y");
+                    double p1Scale = bundle.get("p1Scale");
+                    double p2X = bundle.get("p2X");
+                    double p2Y = bundle.get("p2Y");
+                    double p2Scale = bundle.get("p2Scale");
+                    boolean s1Vis = bundle.get("s1Vis");
+                    double s1X = bundle.get("s1X");
+                    double s1Y = bundle.get("s1Y");
+                    double s1Rot = bundle.get("s1Rot");
+                    boolean s2Vis = bundle.get("s2Vis");
+                    double s2X = bundle.get("s2X");
+                    double s2Y = bundle.get("s2Y");
+                    double s2Rot = bundle.get("s2Rot");
+                    int score1 = bundle.get("score1");
+                    int score2 = bundle.get("score2");
+                    boolean slowmo = bundle.get("slowmo");
+                    double p1Opac = bundle.get("p1Opac");
+                    double p2Opac = bundle.get("p2Opac");
+                    boolean p1Attack = bundle.get("p1Attack");
+                    boolean p1Parry = bundle.get("p1Parry");
+                    boolean p2Attack = bundle.get("p2Attack");
+                    boolean p2Parry = bundle.get("p2Parry");
 
-                player1.setPosition(p1X, p1Y);
-                player1.setScaleX(p1Scale);
-                player1.getViewComponent().setOpacity(p1Opac);
-                player1.getComponent(PlayerComponent.class).setAttacking(p1Attack);
-                player1.getComponent(PlayerComponent.class).setParrying(p1Parry);
+                    player1.setPosition(p1X, p1Y);
+                    player1.setScaleX(p1Scale);
+                    player1.getViewComponent().setOpacity(p1Opac);
+                    player1.getComponent(PlayerComponent.class).setAttacking(p1Attack);
+                    player1.getComponent(PlayerComponent.class).setParrying(p1Parry);
 
-                player2.setPosition(p2X, p2Y);
-                player2.setScaleX(p2Scale);
-                player2.getViewComponent().setOpacity(p2Opac);
-                player2.getComponent(PlayerComponent.class).setAttacking(p2Attack);
-                player2.getComponent(PlayerComponent.class).setParrying(p2Parry);
+                    player2.setPosition(p2X, p2Y);
+                    player2.setScaleX(p2Scale);
+                    player2.getViewComponent().setOpacity(p2Opac);
+                    player2.getComponent(PlayerComponent.class).setAttacking(p2Attack);
+                    player2.getComponent(PlayerComponent.class).setParrying(p2Parry);
 
-                sword1.setVisible(s1Vis);
-                sword1.setPosition(s1X, s1Y);
-                sword1.setRotation(s1Rot);
-                sword2.setVisible(s2Vis);
-                sword2.setPosition(s2X, s2Y);
-                sword2.setRotation(s2Rot);
-                set("score1", score1);
-                set("score2", score2);
-                set("slowmo", slowmo);
+                    sword1.setVisible(s1Vis);
+                    sword1.setPosition(s1X, s1Y);
+                    sword1.setRotation(s1Rot);
+                    sword2.setVisible(s2Vis);
+                    sword2.setPosition(s2X, s2Y);
+                    sword2.setRotation(s2Rot);
+                    set("score1", score1);
+                    set("score2", score2);
+                    set("slowmo", slowmo);
 
-                // Additional visual feedback for states could be added here
-                // but for now, position and visibility are the key.
+                    // Additional visual feedback for states could be added here
+                    // but for now, position and visibility are the key.
+                }, javafx.util.Duration.ZERO);
             });
 
             // No explicit setOnDisconnected in FXGL Connection
@@ -255,14 +259,14 @@ public class SwordGameApp extends GameApplication {
             @Override
             protected void onAction() {
                 if (netMode == NetMode.CLIENT) return;
-                if (!getb("slowmo")) player1.getComponent(PlayerComponent.class).moveLeft();
+                if (!getb("slowmo") && p1State != PlayerState.STUNNED) player1.getComponent(PlayerComponent.class).moveLeft();
             }
         }, KeyCode.A);
         getInput().addAction(new UserAction("P1 Move Right") {
             @Override
             protected void onAction() {
                 if (netMode == NetMode.CLIENT) return;
-                if (!getb("slowmo")) player1.getComponent(PlayerComponent.class).moveRight();
+                if (!getb("slowmo") && p1State != PlayerState.STUNNED) player1.getComponent(PlayerComponent.class).moveRight();
             }
         }, KeyCode.D);
         getInput().addAction(new UserAction("P1 Attack") {
@@ -291,6 +295,8 @@ public class SwordGameApp extends GameApplication {
                         bundle.put("action", "MOVE_LEFT");
                         connection.send(bundle);
                     }
+                } else if (netMode == NetMode.SINGLE_PLAYER) {
+                    if (!getb("slowmo")) player2.getComponent(PlayerComponent.class).moveLeft();
                 }
             }
         }, KeyCode.LEFT);
@@ -303,6 +309,8 @@ public class SwordGameApp extends GameApplication {
                         bundle.put("action", "MOVE_RIGHT");
                         connection.send(bundle);
                     }
+                } else if (netMode == NetMode.SINGLE_PLAYER) {
+                    if (!getb("slowmo")) player2.getComponent(PlayerComponent.class).moveRight();
                 }
             }
         }, KeyCode.RIGHT);
@@ -315,6 +323,11 @@ public class SwordGameApp extends GameApplication {
                         bundle.put("action", "ATTACK");
                         connection.send(bundle);
                     }
+                } else if (netMode == NetMode.SINGLE_PLAYER) {
+                    if (p2State == PlayerState.IDLE && !getb("slowmo")) attack(player2, sword2, (int) player2.getScaleX());
+                } else if (netMode == NetMode.SERVER) {
+                    // Locally allow P2 attack if it's not single player? 
+                    // No, server should not control P2 in multiplayer.
                 }
             }
         }, KeyCode.ENTER);
@@ -327,6 +340,8 @@ public class SwordGameApp extends GameApplication {
                         bundle.put("action", "PARRY");
                         connection.send(bundle);
                     }
+                } else if (netMode == NetMode.SINGLE_PLAYER) {
+                    if (p2State == PlayerState.IDLE && !getb("slowmo")) parry(player2, 2);
                 }
             }
         }, KeyCode.NUMPAD0);
@@ -504,75 +519,83 @@ public class SwordGameApp extends GameApplication {
     protected void initPhysics() {
         onCollisionBegin(EntityType.SWORD1, EntityType.PARRY_P2, (sword, shield) -> {
             if (netMode == NetMode.CLIENT) return;
-            spawnSparks(sword.getCenter());
-            getGameScene().getViewport().shake(0.2, 0.2);
-            
-            // Knockback
-            player1.translateX(-20);
-            player2.translateX(10);
+            runOnce(() -> {
+                spawnSparks(sword.getCenter());
+                getGameScene().getViewport().shake(0.2, 5);
+                
+                // Knockback
+                player1.translateX(-20);
+                player2.translateX(10);
 
-            sword.setVisible(false);
-            sword.setPosition(-100, -100);
-            
-            // Only stun the attacker (P1)
-            stun(player1, 1);
-            
-            // Reset P2 state so they can counter-attack immediately
-            p2State = PlayerState.IDLE;
-            player2.getComponent(PlayerComponent.class).setParrying(false);
-            player2.getViewComponent().setOpacity(1.0);
+                sword.setVisible(false);
+                sword.setPosition(-100, -100);
+                
+                // Only stun the attacker (P1)
+                stun(player1, 1);
+                
+                // Reset P2 state so they can counter-attack immediately
+                p2State = PlayerState.IDLE;
+                player2.getComponent(PlayerComponent.class).setParrying(false);
+                player2.getViewComponent().setOpacity(1.0);
+            }, javafx.util.Duration.ZERO);
         });
 
         onCollisionBegin(EntityType.SWORD2, EntityType.PARRY_P1, (sword, shield) -> {
             if (netMode == NetMode.CLIENT) return;
-            spawnSparks(sword.getCenter());
-            getGameScene().getViewport().shake(0.2, 5);
+            runOnce(() -> {
+                spawnSparks(sword.getCenter());
+                getGameScene().getViewport().shake(0.2, 5);
 
-            // Knockback
-            player2.translateX(20);
-            player1.translateX(-10);
+                // Knockback
+                player2.translateX(20);
+                player1.translateX(-10);
 
-            sword.setVisible(false);
-            sword.setPosition(-100, -100);
-            
-            // Only stun the attacker (P2)
-            stun(player2, 2);
-            
-            // Reset P1 state so they can counter-attack immediately
-            p1State = PlayerState.IDLE;
-            player1.getComponent(PlayerComponent.class).setParrying(false);
-            player1.getViewComponent().setOpacity(1.0);
+                sword.setVisible(false);
+                sword.setPosition(-100, -100);
+                
+                // Only stun the attacker (P2)
+                stun(player2, 2);
+                
+                // Reset P1 state so they can counter-attack immediately
+                p1State = PlayerState.IDLE;
+                player1.getComponent(PlayerComponent.class).setParrying(false);
+                player1.getViewComponent().setOpacity(1.0);
+            }, javafx.util.Duration.ZERO);
         });
 
         onCollisionBegin(EntityType.SWORD1, EntityType.PLAYER2, (sword, p2) -> {
             if (netMode == NetMode.CLIENT) return;
-            if (p2State != PlayerState.STUNNED && p2State != PlayerState.PARRYING) {
-                spawnHitEffect(p2.getCenter());
-                getGameScene().getViewport().shake(0.5, 5);
-                inc("score1", +1);
-                
-                // Brief slow motion
-                set("slowmo", true);
-                getGameTimer().runOnceAfter(() -> {
-                    set("slowmo", false);
-                    resetPlayers();
-                }, javafx.util.Duration.seconds(0.05));
-            }
+            runOnce(() -> {
+                if (p2State != PlayerState.STUNNED && p2State != PlayerState.PARRYING) {
+                    spawnHitEffect(p2.getCenter());
+                    getGameScene().getViewport().shake(0.5, 5);
+                    inc("score1", +1);
+                    
+                    // Brief slow motion
+                    set("slowmo", true);
+                    getGameTimer().runOnceAfter(() -> {
+                        set("slowmo", false);
+                        resetPlayers();
+                    }, javafx.util.Duration.seconds(0.05));
+                }
+            }, javafx.util.Duration.ZERO);
         });
         onCollisionBegin(EntityType.SWORD2, EntityType.PLAYER1, (sword, p1) -> {
             if (netMode == NetMode.CLIENT) return;
-            if (p1State != PlayerState.STUNNED && p1State != PlayerState.PARRYING) {
-                spawnHitEffect(p1.getCenter());
-                getGameScene().getViewport().shake(0.5, 5);
-                inc("score2", +1);
+            runOnce(() -> {
+                if (p1State != PlayerState.STUNNED && p1State != PlayerState.PARRYING) {
+                    spawnHitEffect(p1.getCenter());
+                    getGameScene().getViewport().shake(0.5, 5);
+                    inc("score2", +1);
 
-                // Brief slow motion
-                set("slowmo", true);
-                getGameTimer().runOnceAfter(() -> {
-                    set("slowmo", false);
-                    resetPlayers();
-                }, javafx.util.Duration.seconds(0.05));
-            }
+                    // Brief slow motion
+                    set("slowmo", true);
+                    getGameTimer().runOnceAfter(() -> {
+                        set("slowmo", false);
+                        resetPlayers();
+                    }, javafx.util.Duration.seconds(0.05));
+                }
+            }, javafx.util.Duration.ZERO);
         });
     }
 
