@@ -84,7 +84,7 @@ public class SwordGameApp extends GameApplication {
                         if (isHost) {
                             initServer();
                         } else {
-                            getDialogService().showInputBox("Enter Host IP", ip -> {
+                            getDialogService().showInputBox("Enter Host IP (e.g. localhost or 192.168.x.x)", ip -> {
                                 if (ip != null && !ip.isEmpty()) {
                                     initClient(ip);
                                 } else {
@@ -104,30 +104,34 @@ public class SwordGameApp extends GameApplication {
         netMode = NetMode.SERVER;
         var server = getNetService().newTCPServer(55555);
 
-        // Retrieve local IP address for display
-        String hostAddress = "Unknown";
+        // Retrieve local IP addresses for display
+        java.util.List<String> ipAddresses = new java.util.ArrayList<>();
         try {
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
                 java.net.NetworkInterface iface = interfaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp()) continue;
+                if (!iface.isUp() || iface.isLoopback()) continue;
+                
                 java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     java.net.InetAddress addr = addresses.nextElement();
-                    if (addr instanceof java.net.Inet4Address && !addr.isLoopbackAddress()) {
-                        hostAddress = addr.getHostAddress();
-                        break;
+                    if (addr instanceof java.net.Inet4Address) {
+                        ipAddresses.add(addr.getHostAddress());
                     }
                 }
-                if (!"Unknown".equals(hostAddress)) break;
+            }
+            // If no LAN IP, try loopback
+            if (ipAddresses.isEmpty()) {
+                ipAddresses.add("127.0.0.1");
             }
         } catch (Exception e) {
             e.printStackTrace();
+            ipAddresses.add("Unknown");
         }
 
-        final String finalHostAddress = hostAddress;
+        final String finalHostAddress = String.join(", ", ipAddresses);
 
-        Text hostText = new Text("Hosting at IP: " + hostAddress);
+        Text hostText = new Text("Hosting at: " + finalHostAddress);
         hostText.setFill(Color.BLUE);
         hostText.setFont(getUIFactoryService().newFont(16));
         hostText.setX(50);
